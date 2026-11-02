@@ -23,7 +23,8 @@ const MAX_RECENT = 36;
 const MAX_RESULTS = 90;
 const PANEL_WIDTH = 420;
 const PANEL_HEIGHT = 420;
-const FOCUS_WAIT_US = 300 * 1000;
+const FOCUS_WAIT_US = 400 * 1000;
+const FOCUS_SETTLE_US = 60 * 1000;
 const DEFAULT_RECENT = ['😂', '❤️', '👍', '😭', '🙏', '😍', '🔥', '🥰', '😊', '🤣', '😅', '👀'];
 const TAB_ICONS = ['😀', '👋', '🐻', '🍔', '✈️', '⚽', '💡', '🔣', '🏁'];
 const STRINGS = {
@@ -57,6 +58,11 @@ function systemLanguage() {
     return 'en';
 }
 
+// St.BoxLayout gained 'orientation' in GNOME 48 and dropped 'vertical' in 51.
+const VERTICAL = 'orientation' in St.BoxLayout.prototype
+    ? {orientation: Clutter.Orientation.VERTICAL}
+    : {vertical: true};
+
 function normalize(text) {
     return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
@@ -80,7 +86,10 @@ export default class EmojiPanelExtension extends Extension {
         this._cursorRect = null;
         this._recentDirty = true;
 
-        const seat = Clutter.get_default_backend().get_default_seat();
+        // Clutter.get_default_backend() is gone in GNOME 51; the stage
+        // context replacing it exists since 47.
+        const backend = global.stage.context?.get_backend() ?? Clutter.get_default_backend();
+        const seat = backend.get_default_seat();
         this._keyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
 
         this._buildPanel();
@@ -141,8 +150,8 @@ export default class EmojiPanelExtension extends Extension {
 
     _buildPanel() {
         this._panel = new St.BoxLayout({
+            ...VERTICAL,
             style_class: 'emoji-panel',
-            vertical: true,
             reactive: true,
             visible: false,
             width: PANEL_WIDTH,
@@ -198,7 +207,7 @@ export default class EmojiPanelExtension extends Extension {
     }
 
     _buildGrid(emojis) {
-        const box = new St.BoxLayout({vertical: true, style_class: 'emoji-panel-grid'});
+        const box = new St.BoxLayout({...VERTICAL, style_class: 'emoji-panel-grid'});
         box.firstButton = null;
         for (let i = 0; i < emojis.length; i += COLUMNS) {
             const row = new St.BoxLayout({style_class: 'emoji-panel-row'});
@@ -436,13 +445,23 @@ export default class EmojiPanelExtension extends Extension {
         // Otherwise just batch clicks that land together, since mutter keeps
         // only the last commit sent within one frame.
         let deadline = GLib.get_monotonic_time();
-        if (this._searchFocused()) {
+        const returning = this._searchFocused();
+        if (returning) {
             this._returnFocus();
             deadline += FOCUS_WAIT_US;
         }
+        let focusSince = 0;
         this._waitId = this._timeout(15, () => {
-            if (!Main.inputMethod.currentFocus && GLib.get_monotonic_time() < deadline)
-                return true;
+            const now = GLib.get_monotonic_time();
+            if (now < deadline) {
+                if (!Main.inputMethod.currentFocus)
+                    return true;
+                // The input method reports focus slightly before the app can
+                // take text, so give a returning app a moment to settle.
+                focusSince ||= now;
+                if (returning && now - focusSince < FOCUS_SETTLE_US)
+                    return true;
+            }
             this._waitId = null;
             this._flush();
             return false;
