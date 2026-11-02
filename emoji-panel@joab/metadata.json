@@ -1,8 +1,9 @@
 {
   "uuid": "emoji-panel@joab",
   "name": "Emoji Panel",
-  "description": "Painel de emoji estilo Windows: Ctrl+. abre, clique insere direto no app sem fechar, clique fora fecha.",
+  "description": "A Windows-style emoji picker. Press Ctrl+. to open it next to your text cursor, search in English or Portuguese, and click or press Enter to insert emojis straight into the app you are typing in. The panel stays open so you can add several, and closes on Esc or a click outside.\n\nIt lives inside GNOME Shell, like the on-screen keyboard, so it never steals focus from your app.",
   "shell-version": ["46"],
+  "url": "https://github.com/joabzicg/gnome-emoji-panel",
   "settings-schema": "org.gnome.shell.extensions.emoji-panel",
   "version": 1
 }

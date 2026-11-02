@@ -26,17 +26,47 @@ const PANEL_HEIGHT = 420;
 const FOCUS_WAIT_US = 300 * 1000;
 const DEFAULT_RECENT = ['😂', '❤️', '👍', '😭', '🙏', '😍', '🔥', '🥰', '😊', '🤣', '😅', '👀'];
 const TAB_ICONS = ['😀', '👋', '🐻', '🍔', '✈️', '⚽', '💡', '🔣', '🏁'];
-const GROUP_TITLES = ['Carinhas e emoções', 'Pessoas e corpo', 'Animais e natureza',
-    'Comida e bebida', 'Viagens e lugares', 'Atividades', 'Objetos', 'Símbolos', 'Bandeiras'];
+const STRINGS = {
+    pt: {
+        search: 'Pesquisar emoji',
+        recent: 'Usados recentemente',
+        results: 'Resultados',
+        noResults: 'Nenhum emoji encontrado',
+        groups: ['Carinhas e emoções', 'Pessoas e corpo', 'Animais e natureza', 'Comida e bebida',
+            'Viagens e lugares', 'Atividades', 'Objetos', 'Símbolos', 'Bandeiras'],
+    },
+    en: {
+        search: 'Search emoji',
+        recent: 'Recently used',
+        results: 'Results',
+        noResults: 'No emoji found',
+        groups: ['Smileys & Emotion', 'People & Body', 'Animals & Nature', 'Food & Drink',
+            'Travel & Places', 'Activities', 'Objects', 'Symbols', 'Flags'],
+    },
+};
+// Order of the per-language names in keywords.json (see tools/build_emojis.py).
+const NAME_LANGUAGES = ['pt', 'en'];
 const TERMINAL_RE = /terminal|kitty|alacritty|wezterm|konsole|tilix|ptyxis|terminator|xterm|foot/i;
 
+function systemLanguage() {
+    for (const name of GLib.get_language_names()) {
+        const code = name.split(/[_.@]/)[0];
+        if (code in STRINGS)
+            return code;
+    }
+    return 'en';
+}
+
 function normalize(text) {
-    return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
 export default class EmojiPanelExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
+        const language = systemLanguage();
+        this._strings = STRINGS[language];
+        this._nameIndex = NAME_LANGUAGES.indexOf(language);
         this._groups = this._loadJson('emojis.json');
         this._keywords = this._loadJson('keywords.json');
         this._sources = new Set();
@@ -76,10 +106,12 @@ export default class EmojiPanelExtension extends Extension {
         for (const id of this._sources)
             GLib.source_remove(id);
         this._sources = null;
+        // Detach the shown grid first (this also destroys a search grid), so
+        // destroying the panel does not take a cached grid down with it.
+        this._setGrid(null);
         this._panel.destroy();
         for (const grid of this._grids.values())
             grid.destroy();
-        this._searchGrid?.destroy();
         this._panel = null;
         this._grids = null;
         this._searchGrid = null;
@@ -88,6 +120,7 @@ export default class EmojiPanelExtension extends Extension {
         this._settings = null;
         this._groups = null;
         this._keywords = null;
+        this._strings = null;
     }
 
     _timeout(ms, fn) {
@@ -118,7 +151,7 @@ export default class EmojiPanelExtension extends Extension {
 
         this._entry = new St.Entry({
             style_class: 'emoji-panel-search',
-            hint_text: 'Pesquisar emoji',
+            hint_text: this._strings.search,
             can_focus: true,
             x_expand: true,
         });
@@ -180,7 +213,7 @@ export default class EmojiPanelExtension extends Extension {
                 button.connect('clicked', () => this._insert(emoji));
                 button.connect('notify::hover', () => {
                     this._title.text = button.hover
-                        ? this._keywords[emoji]?.[0] ?? this._titleText
+                        ? this._keywords[emoji]?.[0][this._nameIndex] || this._titleText
                         : this._titleText;
                 });
                 row.add_child(button);
@@ -250,8 +283,7 @@ export default class EmojiPanelExtension extends Extension {
             else
                 tab.remove_style_class_name('active');
         });
-        this._setTitle(index === 0 ? 'Usados recentemente'
-            : GROUP_TITLES[index - 1] ?? this._groups[index - 1].name);
+        this._setTitle(index === 0 ? this._strings.recent : this._strings.groups[index - 1]);
         this._setGrid(this._gridFor(index));
     }
 
@@ -267,7 +299,7 @@ export default class EmojiPanelExtension extends Extension {
         const grid = this._buildGrid(this._results);
         this._setGrid(grid);
         this._searchGrid = grid;
-        this._setTitle(this._results.length ? 'Resultados' : 'Nenhum emoji encontrado');
+        this._setTitle(this._results.length ? this._strings.results : this._strings.noResults);
     }
 
     _search(query) {

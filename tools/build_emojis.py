@@ -15,8 +15,9 @@ The first language given provides the names shown in the panel; every
 language adds search keywords.
 
 Writes OUT_DIR/emojis.json (groups) and OUT_DIR/keywords.json
-({emoji: [display name, "name|name", "keyword|keyword|..."]}, the last two
-lowercased and without accents).
+({emoji: [[name per language, in --annotations order], "name|name",
+"keyword|keyword|..."]}, the last two lowercased and without accents).
+The extension expects the languages in the order pt, en.
 
 Skin tone variants and the "Component" group are skipped, and emojis newer
 than --max-version (default 15.1, what Ubuntu 24.04's Noto Color Emoji draws)
@@ -93,14 +94,13 @@ def main():
             names, words = [], []
             for annotations in languages:
                 name, kws = annotations.get(bare(emoji), ('', []))
-                if name:
-                    names.append(name)
+                names.append(name)
                 words += kws
-            if not names:
+            if not any(names):
                 continue
-            name_text = '|'.join(dict.fromkeys(normalize(n) for n in names))
+            name_text = '|'.join(dict.fromkeys(normalize(n) for n in names if n))
             word_text = '|'.join(dict.fromkeys(normalize(w) for w in words if w))
-            keywords[emoji] = [names[0], name_text, word_text]
+            keywords[emoji] = [names, name_text, word_text]
 
     with open(os.path.join(args.out_dir, 'emojis.json'), 'w', encoding='utf-8') as f:
         json.dump(groups, f, ensure_ascii=False, separators=(',', ':'))
