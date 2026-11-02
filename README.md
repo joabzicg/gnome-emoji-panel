@@ -19,7 +19,7 @@ A barra de pesquisa precisa do teclado enquanto você digita nela; ao escolher u
 
 ## Instalação
 
-Requer GNOME Shell 46 (Ubuntu 24.04).
+Funciona no GNOME Shell 46 a 51 (Ubuntu 24.04 LTS, 26.04 LTS e 26.10). Testado de ponta a ponta no 46, 50 e 51; no 47 a 49 as APIs usadas foram conferidas no código-fonte do GNOME.
 
 ```bash
 git clone https://github.com/joabzicg/gnome-emoji-panel.git
