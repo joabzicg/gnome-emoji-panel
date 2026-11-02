@@ -83,6 +83,7 @@ export default class EmojiPanelExtension extends Extension {
         this._panel = null;
         this._grids = null;
         this._searchGrid = null;
+        this._selected = null;
         this._keyboard = null;
         this._settings = null;
         this._groups = null;
@@ -126,15 +127,6 @@ export default class EmojiPanelExtension extends Extension {
             style_class: 'emoji-panel-search-icon',
         }));
         this._entry.clutter_text.connect('text-changed', () => this._onSearchChanged());
-        // Enter inserts the first search result or, with an empty search,
-        // the first emoji shown (the most recent one when the panel opens).
-        this._entry.clutter_text.connect('activate', () => {
-            const emoji = this._entry.text.trim()
-                ? this._results[0]
-                : this._shownEmojis()[0];
-            if (emoji)
-                this._insert(emoji);
-        });
         this._panel.add_child(this._entry);
 
         this._tabBar = new St.BoxLayout({style_class: 'emoji-panel-tabs'});
@@ -174,6 +166,7 @@ export default class EmojiPanelExtension extends Extension {
 
     _buildGrid(emojis) {
         const box = new St.BoxLayout({vertical: true, style_class: 'emoji-panel-grid'});
+        box.firstButton = null;
         for (let i = 0; i < emojis.length; i += COLUMNS) {
             const row = new St.BoxLayout({style_class: 'emoji-panel-row'});
             for (const emoji of emojis.slice(i, i + COLUMNS)) {
@@ -182,6 +175,8 @@ export default class EmojiPanelExtension extends Extension {
                     label: emoji,
                     can_focus: false,
                 });
+                button.emoji = emoji;
+                box.firstButton ??= button;
                 button.connect('clicked', () => this._insert(emoji));
                 button.connect('notify::hover', () => {
                     this._title.text = button.hover
@@ -202,8 +197,7 @@ export default class EmojiPanelExtension extends Extension {
                     this._setGrid(null);
                 this._grids.get(0)?.destroy();
                 const recent = this._settings.get_strv('recent');
-                this._recentShown = recent.length ? recent : DEFAULT_RECENT;
-                this._grids.set(0, this._buildGrid(this._recentShown));
+                this._grids.set(0, this._buildGrid(recent.length ? recent : DEFAULT_RECENT));
                 this._recentDirty = false;
             }
         } else if (!this._grids.has(index)) {
@@ -216,6 +210,8 @@ export default class EmojiPanelExtension extends Extension {
         const old = this._scroll.child;
         if (old === grid)
             return;
+        this._selected?.remove_style_class_name('selected');
+        this._selected = null;
         // Category grids are cached, so detach them without destroying.
         if (old)
             this._scroll.remove_child(old);
@@ -225,15 +221,19 @@ export default class EmojiPanelExtension extends Extension {
         }
         if (grid)
             this._scroll.child = grid;
+        // Enter inserts the first emoji shown, so that is the one highlighted.
+        this._selected = grid?.firstButton ?? null;
+        this._selected?.add_style_class_name('selected');
         const adjustment = this._scroll.vadjustment ?? this._scroll.vscroll?.adjustment;
         adjustment?.set_value(0);
     }
 
-    _shownEmojis() {
-        // The recent grid keeps its order while open, so follow what is shown.
-        return this._currentTab === 0
-            ? this._recentShown
-            : this._groups[this._currentTab - 1].emojis;
+    _insertSelected() {
+        // The first search result or, with an empty search, the first emoji
+        // shown (the most recent one when the panel opens). The recent grid
+        // keeps its order while open, so repeated presses repeat the emoji.
+        if (this._selected)
+            this._insert(this._selected.emoji);
     }
 
     _setTitle(text) {
@@ -317,6 +317,11 @@ export default class EmojiPanelExtension extends Extension {
         Main.wm.addKeybinding('close-panel', this._settings,
             Meta.KeyBindingFlags.NONE, Shell.ActionMode.NORMAL,
             () => this._hide());
+        // Enter belongs to the panel while it is open, whoever has focus, so
+        // pressing it again repeats the emoji instead of reaching the app.
+        Main.wm.addKeybinding('insert-selected', this._settings,
+            Meta.KeyBindingFlags.NONE, Shell.ActionMode.NORMAL,
+            () => this._insertSelected());
 
         // Shell chrome never sees clicks that land on windows, so watch the
         // pointer while open and close on any press outside the panel.
@@ -339,6 +344,7 @@ export default class EmojiPanelExtension extends Extension {
         const searching = this._searchFocused();
         this._panel.hide();
         Main.wm.removeKeybinding('close-panel');
+        Main.wm.removeKeybinding('insert-selected');
         if (this._pollId) {
             GLib.source_remove(this._pollId);
             this._sources.delete(this._pollId);

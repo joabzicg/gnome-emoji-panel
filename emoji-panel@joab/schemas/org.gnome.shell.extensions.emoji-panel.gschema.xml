@@ -9,6 +9,10 @@
       <default><![CDATA[['Escape']]]></default>
       <summary>Fecha o painel (ativo só enquanto aberto)</summary>
     </key>
+    <key name="insert-selected" type="as">
+      <default><![CDATA[['Return', 'KP_Enter']]]></default>
+      <summary>Insere o emoji destacado (ativo só enquanto aberto)</summary>
+    </key>
     <key name="recent" type="as">
       <default>[]</default>
       <summary>Emojis usados recentemente</summary>
