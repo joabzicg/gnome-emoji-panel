@@ -1,0 +1,53 @@
+.emoji-panel {
+  background-color: rgba(38, 38, 40, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.emoji-panel-tabs {
+  spacing: 2px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.emoji-panel-tab {
+  font-family: "Noto Color Emoji";
+  font-size: 17px;
+  padding: 5px 0;
+  border-radius: 8px;
+  border-bottom: 2px solid transparent;
+}
+
+.emoji-panel-tab:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.emoji-panel-tab.active {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-bottom: 2px solid #e95420;
+}
+
+.emoji-panel-title {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 11px;
+  font-weight: bold;
+  padding: 6px 6px 4px;
+}
+
+.emoji-panel-emoji {
+  font-family: "Noto Color Emoji";
+  font-size: 24px;
+  width: 44px;
+  height: 40px;
+  border-radius: 8px;
+}
+
+.emoji-panel-emoji:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.emoji-panel-emoji:active {
+  background-color: rgba(255, 255, 255, 0.20);
+}

@@ -1,0 +1,8 @@
+{
+  "uuid": "emoji-panel@joab",
+  "name": "Emoji Panel",
+  "description": "Painel de emoji estilo Windows: Ctrl+. abre, clique insere direto no app sem fechar, clique fora fecha.",
+  "shell-version": ["46"],
+  "settings-schema": "org.gnome.shell.extensions.emoji-panel",
+  "version": 1
+}

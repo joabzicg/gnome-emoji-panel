@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.emoji-panel" path="/org/gnome/shell/extensions/emoji-panel/">
+    <key name="toggle-panel" type="as">
+      <default><![CDATA[['<Control>period']]]></default>
+      <summary>Atalho para abrir/fechar o painel</summary>
+    </key>
+    <key name="close-panel" type="as">
+      <default><![CDATA[['Escape']]]></default>
+      <summary>Fecha o painel (ativo só enquanto aberto)</summary>
+    </key>
+    <key name="recent" type="as">
+      <default>[]</default>
+      <summary>Emojis usados recentemente</summary>
+    </key>
+  </schema>
+</schemalist>
