@@ -126,9 +126,14 @@ export default class EmojiPanelExtension extends Extension {
             style_class: 'emoji-panel-search-icon',
         }));
         this._entry.clutter_text.connect('text-changed', () => this._onSearchChanged());
+        // Enter inserts the first search result or, with an empty search,
+        // the first emoji shown (the most recent one when the panel opens).
         this._entry.clutter_text.connect('activate', () => {
-            if (this._results.length)
-                this._insert(this._results[0]);
+            const emoji = this._entry.text.trim()
+                ? this._results[0]
+                : this._shownEmojis()[0];
+            if (emoji)
+                this._insert(emoji);
         });
         this._panel.add_child(this._entry);
 
@@ -197,7 +202,8 @@ export default class EmojiPanelExtension extends Extension {
                     this._setGrid(null);
                 this._grids.get(0)?.destroy();
                 const recent = this._settings.get_strv('recent');
-                this._grids.set(0, this._buildGrid(recent.length ? recent : DEFAULT_RECENT));
+                this._recentShown = recent.length ? recent : DEFAULT_RECENT;
+                this._grids.set(0, this._buildGrid(this._recentShown));
                 this._recentDirty = false;
             }
         } else if (!this._grids.has(index)) {
@@ -221,6 +227,13 @@ export default class EmojiPanelExtension extends Extension {
             this._scroll.child = grid;
         const adjustment = this._scroll.vadjustment ?? this._scroll.vscroll?.adjustment;
         adjustment?.set_value(0);
+    }
+
+    _shownEmojis() {
+        // The recent grid keeps its order while open, so follow what is shown.
+        return this._currentTab === 0
+            ? this._recentShown
+            : this._groups[this._currentTab - 1].emojis;
     }
 
     _setTitle(text) {
